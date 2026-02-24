@@ -90,3 +90,29 @@ func TestViewShowsStyledSectionsAndHints(t *testing.T) {
 		}
 	}
 }
+
+func TestViewSmallWindowStillShowsHeaderAndCommands(t *testing.T) {
+	m := modelUI{
+		all: []model.Skill{{Name: "A very very long prompt name", Description: "A very very long description to stress layout", Body: "Line 1\nLine 2\nLine 3"}},
+		filtered: []model.Skill{{Name: "A very very long prompt name", Description: "A very very long description to stress layout", Body: "Line 1\nLine 2\nLine 3"}},
+		selected: 0,
+		width:    40,
+		height:   12,
+	}
+
+	v := m.View()
+
+	checks := []string{
+		"Grimmoir Prompt Studio",
+		"Command Guide",
+		"search [/]: OFF",
+		"Prompt Stack",
+		"Skill Browser",
+		"Preview Pane",
+	}
+	for _, check := range checks {
+		if !strings.Contains(v, check) {
+			t.Fatalf("expected small-window view to include %q", check)
+		}
+	}
+}

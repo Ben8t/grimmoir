@@ -2,8 +2,6 @@
 
 Grimmoir is a Go CLI/TUI for managing local markdown prompts and agent skills.
 
-## Screenshot
-
 ![Grimmoir TUI](misc/tui-screenshot.jpg)
 
 ## Install

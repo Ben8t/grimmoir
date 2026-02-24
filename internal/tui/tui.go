@@ -190,7 +190,11 @@ func (m modelUI) View() string {
 	styles := newStyles()
 
 	header := styles.header.Render("Grimmoir Prompt Studio")
-	commands := styles.panel.Width(max(80, m.width-8)).Render(m.renderCommandGuide(styles))
+	contentWidth := 104
+	if m.width > 0 {
+		contentWidth = max(28, m.width-6)
+	}
+	commands := styles.panel.Width(contentWidth).Render(m.renderCommandGuide(styles))
 
 	stateRows := make([]string, 0, 2)
 	if m.searchMode {
@@ -204,26 +208,40 @@ func (m modelUI) View() string {
 		state = strings.Join(stateRows, "\n") + "\n"
 	}
 
-	stack := m.renderStack(styles)
-	browser := m.renderList(styles)
-	preview := m.renderPreview(styles)
+	stack := m.renderStack(styles, contentWidth)
 
-	leftWidth := 44
-	if m.width > 0 {
-		leftWidth = max(36, m.width/2-2)
+	maxListRows := 10
+	maxPreviewLines := 28
+	if m.height > 0 {
+		maxListRows = max(4, (m.height-18)/2)
+		maxPreviewLines = max(6, m.height-16)
 	}
-	rightWidth := max(34, leftWidth-6)
 
-	left := lipgloss.JoinVertical(lipgloss.Left,
-		styles.panel.Width(leftWidth).Render(stack),
-		styles.panel.Width(leftWidth).Render(browser),
-	)
-	right := styles.panel.Width(rightWidth).Render(preview)
-	body := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	browser := m.renderList(styles, contentWidth, maxListRows)
+	preview := m.renderPreview(styles, contentWidth, maxPreviewLines)
+
+	body := ""
+	if contentWidth < 92 {
+		body = lipgloss.JoinVertical(
+			lipgloss.Left,
+			styles.panel.Width(contentWidth).Render(stack),
+			styles.panel.Width(contentWidth).Render(browser),
+			styles.panel.Width(contentWidth).Render(preview),
+		)
+	} else {
+		leftWidth := max(34, contentWidth/2-1)
+		rightWidth := max(34, contentWidth-leftWidth-1)
+		left := lipgloss.JoinVertical(lipgloss.Left,
+			styles.panel.Width(leftWidth).Render(stack),
+			styles.panel.Width(leftWidth).Render(browser),
+		)
+		right := styles.panel.Width(rightWidth).Render(preview)
+		body = lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	}
 
 	footer := ""
 	if m.status != "" {
-		footer = "\n" + styles.status.Render(m.status)
+		footer = "\n" + styles.status.Width(contentWidth).Render(truncate(m.status, contentWidth-2))
 	}
 
 	return styles.base.Render(header + "\n\n" + commands + "\n\n" + state + body + footer)
@@ -256,18 +274,18 @@ func (m modelUI) renderCommandGuide(styles uiStyles) string {
 	return b.String()
 }
 
-func (m modelUI) renderStack(styles uiStyles) string {
+func (m modelUI) renderStack(styles uiStyles, panelWidth int) string {
 	if len(m.stack) == 0 {
 		return styles.sectionTitle.Render("Prompt Stack") + "\n" + styles.muted.Render("No prompts selected")
 	}
 	tokens := make([]string, 0, len(m.stack))
 	for _, name := range m.stack {
-		tokens = append(tokens, styles.pill.Render(name))
+		tokens = append(tokens, styles.pill.Render(truncate(name, max(8, panelWidth/3))))
 	}
 	return styles.sectionTitle.Render("Prompt Stack") + "\n" + strings.Join(tokens, " ")
 }
 
-func (m modelUI) renderList(styles uiStyles) string {
+func (m modelUI) renderList(styles uiStyles, panelWidth int, maxRows int) string {
 	b := strings.Builder{}
 	b.WriteString(styles.sectionTitle.Render("Skill Browser"))
 	b.WriteString("\n")
@@ -275,8 +293,14 @@ func (m modelUI) renderList(styles uiStyles) string {
 		b.WriteString(styles.muted.Render("No results"))
 		return b.String()
 	}
-	for i, s := range m.filtered {
+	end := len(m.filtered)
+	if end > maxRows {
+		end = maxRows
+	}
+	for i := 0; i < end; i++ {
+		s := m.filtered[i]
 		row := fmt.Sprintf("%s  %s", s.Name, s.Description)
+		row = truncate(row, max(8, panelWidth-8))
 		if contains(m.stack, s.Name) {
 			row = "* " + row
 		} else {
@@ -287,14 +311,17 @@ func (m modelUI) renderList(styles uiStyles) string {
 		} else {
 			b.WriteString(styles.row.Render("  " + row))
 		}
-		if i < len(m.filtered)-1 {
+		if i < end-1 {
 			b.WriteString("\n")
 		}
+	}
+	if len(m.filtered) > end {
+		b.WriteString("\n" + styles.muted.Render(fmt.Sprintf("... %d more", len(m.filtered)-end)))
 	}
 	return b.String()
 }
 
-func (m modelUI) renderPreview(styles uiStyles) string {
+func (m modelUI) renderPreview(styles uiStyles, panelWidth int, maxLines int) string {
 	b := strings.Builder{}
 	b.WriteString(styles.sectionTitle.Render("Preview Pane"))
 	b.WriteString("\n")
@@ -303,10 +330,15 @@ func (m modelUI) renderPreview(styles uiStyles) string {
 		return b.String()
 	}
 	preview := strings.TrimSpace(m.filtered[m.selected].Body)
-	if len(preview) > 1000 {
-		preview = preview[:1000] + "..."
+	lines := strings.Split(preview, "\n")
+	if len(lines) > maxLines {
+		lines = lines[:maxLines]
+		lines = append(lines, "...")
 	}
-	b.WriteString(styles.preview.Render(preview))
+	for i := range lines {
+		lines[i] = truncate(lines[i], max(10, panelWidth-6))
+	}
+	b.WriteString(styles.preview.Render(strings.Join(lines, "\n")))
 	return b.String()
 }
 
@@ -347,6 +379,16 @@ func max(a int, b int) int {
 		return a
 	}
 	return b
+}
+
+func truncate(s string, width int) string {
+	if width <= 0 || len(s) <= width {
+		return s
+	}
+	if width <= 3 {
+		return s[:width]
+	}
+	return s[:width-3] + "..."
 }
 
 func (m *modelUI) applySearch() {
