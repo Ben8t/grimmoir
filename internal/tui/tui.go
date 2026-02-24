@@ -188,63 +188,42 @@ func (m modelUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m modelUI) View() string {
 	styles := newStyles()
-
-	header := styles.header.Render("Grimmoir Prompt Studio")
-	contentWidth := 104
+	contentWidth := 100
 	if m.width > 0 {
-		contentWidth = max(28, m.width-6)
+		contentWidth = max(24, m.width)
 	}
-	commands := styles.panel.Width(contentWidth).Render(m.renderCommandGuide(styles))
-
-	stateRows := make([]string, 0, 2)
-	if m.searchMode {
-		stateRows = append(stateRows, styles.badge.Render("Search: "+m.search))
-	}
-	if m.newMode {
-		stateRows = append(stateRows, styles.badge.Render("New skill name: "+m.newName+" (enter to save clipboard)"))
-	}
-	state := ""
-	if len(stateRows) > 0 {
-		state = strings.Join(stateRows, "\n") + "\n"
-	}
-
-	stack := m.renderStack(styles, contentWidth)
 
 	maxListRows := 10
-	maxPreviewLines := 28
+	maxPreviewLines := 18
 	if m.height > 0 {
-		maxListRows = max(4, (m.height-18)/2)
-		maxPreviewLines = max(6, m.height-16)
+		maxListRows = max(3, (m.height-12)/2)
+		maxPreviewLines = max(4, m.height-14)
 	}
 
-	browser := m.renderList(styles, contentWidth, maxListRows)
-	preview := m.renderPreview(styles, contentWidth, maxPreviewLines)
-
-	body := ""
-	if contentWidth < 92 {
-		body = lipgloss.JoinVertical(
-			lipgloss.Left,
-			styles.panel.Width(contentWidth).Render(stack),
-			styles.panel.Width(contentWidth).Render(browser),
-			styles.panel.Width(contentWidth).Render(preview),
-		)
-	} else {
-		leftWidth := max(34, contentWidth/2-1)
-		rightWidth := max(34, contentWidth-leftWidth-1)
-		left := lipgloss.JoinVertical(lipgloss.Left,
-			styles.panel.Width(leftWidth).Render(stack),
-			styles.panel.Width(leftWidth).Render(browser),
-		)
-		right := styles.panel.Width(rightWidth).Render(preview)
-		body = lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	b := strings.Builder{}
+	b.WriteString(styles.header.Render("Grimmoir Prompt Studio"))
+	b.WriteString("\n")
+	b.WriteString(styles.hint.Render(m.renderCommandGuide(styles)))
+	b.WriteString("\n\n")
+	if m.searchMode {
+		b.WriteString(styles.badge.Render("Search: " + truncate(m.search, max(10, contentWidth-12))))
+		b.WriteString("\n")
 	}
-
-	footer := ""
+	if m.newMode {
+		b.WriteString(styles.badge.Render("New skill name: " + truncate(m.newName, max(10, contentWidth-20))))
+		b.WriteString("\n")
+	}
+	b.WriteString(m.renderStack(styles, contentWidth))
+	b.WriteString("\n\n")
+	b.WriteString(m.renderList(styles, contentWidth, maxListRows))
+	b.WriteString("\n\n")
+	b.WriteString(m.renderPreview(styles, contentWidth, maxPreviewLines))
 	if m.status != "" {
-		footer = "\n" + styles.status.Width(contentWidth).Render(truncate(m.status, contentWidth-2))
+		b.WriteString("\n\n")
+		b.WriteString(styles.status.Render("Status: " + truncate(m.status, max(10, contentWidth-10))))
 	}
 
-	return styles.base.Render(header + "\n\n" + commands + "\n\n" + state + body + footer)
+	return fitToHeight(styles.base.Render(b.String()), m.height)
 }
 
 func (m modelUI) renderCommandGuide(styles uiStyles) string {
@@ -265,13 +244,9 @@ func (m modelUI) renderCommandGuide(styles uiStyles) string {
 		deleteState = "NO SELECTION"
 	}
 
-	b := strings.Builder{}
-	b.WriteString(styles.sectionTitle.Render("Command Guide"))
-	b.WriteString("\n")
-	b.WriteString(styles.hint.Render("search [/]: " + searchState + "   new [n]: " + newState))
-	b.WriteString("\n")
-	b.WriteString(styles.hint.Render("move [j/k or arrows]   stack [c]   delete [d]: " + deleteState + "   enter compose+copy: " + composeState + "   quit [q]"))
-	return b.String()
+	return "Command Guide\n" +
+		"search [/]: " + searchState + "   new [n]: " + newState + "\n" +
+		"move [j/k or arrows]   stack [c]   delete [d]: " + deleteState + "   enter compose+copy: " + composeState + "   quit [q]"
 }
 
 func (m modelUI) renderStack(styles uiStyles, panelWidth int) string {
@@ -359,17 +334,17 @@ type uiStyles struct {
 
 func newStyles() uiStyles {
 	return uiStyles{
-		base:         lipgloss.NewStyle().Padding(1, 2),
-		header:       lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("230")).Background(lipgloss.Color("24")).Padding(0, 1),
-		hint:         lipgloss.NewStyle().Foreground(lipgloss.Color("109")),
-		badge:        lipgloss.NewStyle().Foreground(lipgloss.Color("230")).Background(lipgloss.Color("60")).Padding(0, 1),
-		panel:        lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("62")).Padding(1, 1).MarginRight(1),
+		base:         lipgloss.NewStyle(),
+		header:       lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("117")),
+		hint:         lipgloss.NewStyle().Foreground(lipgloss.Color("247")),
+		badge:        lipgloss.NewStyle().Foreground(lipgloss.Color("230")).Background(lipgloss.Color("31")).Padding(0, 1),
+		panel:        lipgloss.NewStyle(),
 		sectionTitle: lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("221")),
 		row:          lipgloss.NewStyle().Foreground(lipgloss.Color("252")),
-		selected:     lipgloss.NewStyle().Foreground(lipgloss.Color("230")).Background(lipgloss.Color("31")).Bold(true),
-		pill:         lipgloss.NewStyle().Foreground(lipgloss.Color("230")).Background(lipgloss.Color("28")).Padding(0, 1),
+		selected:     lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("230")).Background(lipgloss.Color("24")),
+		pill:         lipgloss.NewStyle().Foreground(lipgloss.Color("230")).Background(lipgloss.Color("59")).Padding(0, 1),
 		preview:      lipgloss.NewStyle().Foreground(lipgloss.Color("250")),
-		status:       lipgloss.NewStyle().Foreground(lipgloss.Color("230")).Background(lipgloss.Color("22")).Padding(0, 1),
+		status:       lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("120")),
 		muted:        lipgloss.NewStyle().Foreground(lipgloss.Color("244")),
 	}
 }
@@ -389,6 +364,17 @@ func truncate(s string, width int) string {
 		return s[:width]
 	}
 	return s[:width-3] + "..."
+}
+
+func fitToHeight(text string, height int) string {
+	if height <= 0 {
+		return text
+	}
+	lines := strings.Split(text, "\n")
+	if len(lines) <= height {
+		return text
+	}
+	return strings.Join(lines[:height], "\n")
 }
 
 func (m *modelUI) applySearch() {
