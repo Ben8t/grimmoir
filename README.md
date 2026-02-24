@@ -2,6 +2,17 @@
 
 Grimmoir is a Go CLI/TUI for managing local markdown prompts and agent skills.
 
+## Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Ben8t/grimmoir/main/scripts/install.sh | bash
+```
+
+Optional environment variables:
+
+- `VERSION=v0.1.0` to install a specific release tag
+- `INSTALL_DIR=$HOME/.local/bin` to override the install destination
+
 ## Storage
 
 - Default path: `~/.grimmoir`
@@ -15,7 +26,7 @@ Grimmoir is a Go CLI/TUI for managing local markdown prompts and agent skills.
 - `grim add --name "Expert" --body "..."`: add a skill from inline text
 - `grim add --name "Expert" --clip`: add a skill from clipboard contents
 - `grim delete "Expert"`: delete a skill by name
-- `grim sync`: run `git add .`, commit with timestamp, `git pull --rebase`, `git push`
+- `grim sync`: in the configured store path repo, run `git add -- *.md`, commit with timestamp, `git pull --rebase`, `git push`
 - `grim tui`: launch interactive mode
 
 ## TUI Keys

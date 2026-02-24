@@ -137,10 +137,10 @@ func NewRootCmd() *cobra.Command {
 
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "sync",
-		Short: "Run git add/commit/pull --rebase/push",
+		Short: "Sync prompt markdown files in store repo",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s := git.NewSyncer(git.NewExecRunner())
-			if err := s.Sync(); err != nil {
+			if err := s.Sync(rootPath); err != nil {
 				return err
 			}
 			_, err := fmt.Fprintln(cmd.OutOrStdout(), "Sync complete")
