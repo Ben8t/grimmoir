@@ -69,3 +69,21 @@ A mail-like layer that lets coding agents coordinate asynchronously via MCP tool
 ## Check Deployment on Vercels
 
 Use the vercel cli installed to check and deploy changes if necessary
+
+## Local CLI Update After Changes
+
+When code changes affect the `grim` CLI or TUI, always rebuild and reinstall the local binary so manual testing uses the latest behavior.
+
+Use:
+
+```bash
+go test ./...
+go build -o ./bin/grim ./cmd/grim
+install -m 755 ./bin/grim /opt/homebrew/bin/grim
+```
+
+Then verify:
+
+```bash
+grim --help
+```

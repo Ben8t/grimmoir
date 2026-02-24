@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -58,5 +59,34 @@ func TestDeleteKeyRemovesSelectedSkill(t *testing.T) {
 	}
 	if len(got.stack) != 0 {
 		t.Fatalf("expected removed item from stack, got %#v", got.stack)
+	}
+}
+
+func TestViewShowsStyledSectionsAndHints(t *testing.T) {
+	m := modelUI{
+		all: []model.Skill{{Name: "One", Description: "First", Body: "# One\n\nBody"}},
+		filtered: []model.Skill{{Name: "One", Description: "First", Body: "# One\n\nBody"}},
+		selected: 0,
+		stack:    []string{"One"},
+		status:   "Copied 1 skills to clipboard",
+	}
+
+	v := m.View()
+
+	checks := []string{
+		"Grimmoir Prompt Studio",
+		"Command Guide",
+		"enter compose+copy",
+		"search [/]: OFF",
+		"new [n]: OFF",
+		"Prompt Stack",
+		"Skill Browser",
+		"Preview Pane",
+		"Copied 1 skills to clipboard",
+	}
+	for _, check := range checks {
+		if !strings.Contains(v, check) {
+			t.Fatalf("expected view to include %q", check)
+		}
 	}
 }
